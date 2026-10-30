@@ -86,3 +86,35 @@ def test_aggregate_offer_low_price():
     html = ('<script type="application/ld+json">{"@type":["Product"],"name":"Диван",'
             '"offers":{"@type":"AggregateOffer","lowPrice":24990,"highPrice":31990}}</script>')
     assert extract(html).price == Decimal("24990")
+
+
+def test_book_type_with_offers():
+    """Читай-город размечает книги как Book, а не Product — цену всё равно находим."""
+    html = ('<script type="application/ld+json">{"@context":"https://schema.org","@graph":['
+            '{"@type":"WebSite","name":"Читай-город"},'
+            '{"@type":"Book","name":"Кошки, кофе, криминал","offers":{"@type":"Offer",'
+            '"availability":"https://schema.org/InStock","price":"579.00","priceCurrency":"RUB"}}'
+            ']}</script>'
+            '<div class="product-offer-price__old"><span>695 </span></div>')
+    p = extract(html)
+    assert (p.name, p.price, p.currency, p.in_stock) == (
+        "Кошки, кофе, криминал", Decimal("579.00"), "RUB", True)
+    assert p.old_price == Decimal("695")
+
+
+def test_microdata_price_with_space():
+    """Стройпарк: itemprop=price content="3 649.00" — пробел в разрядах."""
+    p = extract('<meta itemprop="price" content="3 649.00"><h1>Гайковерт</h1>')
+    assert p.price == Decimal("3649.00")
+
+
+def test_microdata_name_link_text_not_href():
+    """Стройпарк: <a itemprop="name" href="/good/…">Гайковерт</a> — берём текст, а не адрес."""
+    html = ('<div itemscope itemtype="https://schema.org/Product">'
+            '<a href="/good/27724301" itemprop="name">Гайковерт QUATTRO ELEMENTI</a>'
+            '<meta itemprop="price" content="3 649.00"></div>'
+            '<del class="carrot-product-price-old">4 290.00 ₽</del>')
+    p = extract(html)
+    assert p.name == "Гайковерт QUATTRO ELEMENTI"
+    assert p.old_price == Decimal("4290.00")
+    assert p.currency == "RUB"          # не размечена — угадали по «₽» на странице

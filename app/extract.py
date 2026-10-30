@@ -97,10 +97,15 @@ def _walk_json(node):
             yield from _walk_json(item)
 
 
+OFFER_TYPES = {"offer", "aggregateoffer"}
+
+
 def _is_product(node: dict) -> bool:
+    """Товар — любой объект с «offers»: Product, но и Book (Читай-город), Car, Event…
+    Сами Offer пропускаем — их разбираем внутри товара."""
     kind = node.get("@type")
-    kinds = kind if isinstance(kind, list) else [kind]
-    return any(str(k).lower() in ("product", "productgroup", "individualproduct") for k in kinds)
+    kinds = {str(k).lower() for k in (kind if isinstance(kind, list) else [kind])}
+    return bool(node.get("offers")) and not kinds & OFFER_TYPES
 
 
 def _from_json_ld(soup: BeautifulSoup) -> Product:
@@ -138,9 +143,14 @@ def _itemprop(scope: Tag, prop: str) -> Tag | None:
 
 
 def _prop_value(el: Tag | None) -> str | None:
+    """Значение itemprop: у <meta> — content, у <link> — href, у остальных — текст.
+    Важно не брать href у ссылки: <a itemprop="name" href="/good/1">Гайковерт</a>
+    (так у Стройпарка) — название здесь текст, а не адрес."""
     if el is None:
         return None
-    return el.get("content") or el.get("href") or el.get_text(" ", strip=True)
+    if el.name == "link":
+        return el.get("href")
+    return el.get("content") or el.get_text(" ", strip=True)
 
 
 def _from_microdata(soup: BeautifulSoup) -> Product:
@@ -203,6 +213,9 @@ def extract(html: str, selectors: Selectors | None = None) -> Product:
         h1 = soup.find("h1")
         title = h1.get_text(" ", strip=True) if h1 else (soup.title.string if soup.title else None)
         product.name = _clean(title)
+    if product.currency is None and product.price is not None:
+        # Валюту не указали в разметке — угадываем по знакам на странице (₽, руб, $…)
+        product.currency = parse_currency(soup.get_text(" ")[:200000])
     if product.currency:
         product.currency = product.currency.upper()
         if product.currency in ("RUR", "РУБ"):
