@@ -1,0 +1,8 @@
+.env
+credentials.json
+*.db
+__pycache__/
+.venv/
+data/
+.pytest_cache/
+CLAUDE.md
