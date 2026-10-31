@@ -3,3 +3,4 @@ beautifulsoup4>=4.12
 gspread>=6.0,<7
 python-dotenv>=1.0
 tzdata>=2024.1
+patchright>=1.50

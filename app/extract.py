@@ -19,7 +19,8 @@ from .prices import parse_currency, parse_price
 # Типичные классы зачёркнутой «старой» цены в шаблонах магазинов
 OLD_PRICE_SELECTOR = (
     '[class*="old-price"], [class*="price-old"], [class*="old_price"], [class*="price_old"], '
-    '[class*="oldprice"], [class*="oldPrice"], [class*="price--old"], [class*="price__old"]'
+    '[class*="oldprice"], [class*="oldPrice"], [class*="OldPrice"], [class*="price--old"], '
+    '[class*="price__old"]'
 )
 IN_STOCK = ("instock", "in_stock", "limitedavailability", "onlineonly", "preorder", "presale")
 OUT_OF_STOCK = ("outofstock", "out_of_stock", "soldout", "discontinued")
@@ -63,7 +64,8 @@ def _availability(value) -> bool | None:
 
 
 def _clean(text: str | None) -> str | None:
-    text = " ".join((text or "").split())
+    """Лишние пробелы и «хвосты» вроде «Куртка зимняя, » (так бывает в og:title у WB)."""
+    text = " ".join((text or "").split()).rstrip(" ,;|–-")
     return text or None
 
 
