@@ -8,16 +8,17 @@ from .table import SiteSettings
 
 BUILTIN: dict[str, SiteSettings] = {
     # Цена рисуется скриптом, классы с «хвостом» (priceBlockFinalPrice--yEKcc),
-    # поэтому ищем по началу имени класса. Название — из og:title.
+    # поэтому ищем по части имени класса. Название — заголовок товара productTitle--…
+    # (не h1: в h1 у WB рейтинг «4,9»; og:title первые секунды — общий заголовок сайта).
     "wildberries.ru": SiteSettings(
         Selectors(price='[class*="priceBlockFinalPrice"]',
                   old_price='[class*="priceBlockOldPrice"]',
-                  name='meta[property="og:title"]'),
+                  name='[class*="productTitle"]'),
         browser=True),
     "wb.ru": SiteSettings(
         Selectors(price='[class*="priceBlockFinalPrice"]',
                   old_price='[class*="priceBlockOldPrice"]',
-                  name='meta[property="og:title"]'),
+                  name='[class*="productTitle"]'),
         browser=True),
     # Защита Qrator: обычный запрос получает 401, браузер проходит, дальше — JSON-LD
     "dns-shop.ru": SiteSettings(Selectors(), browser=True),
