@@ -1,0 +1,13 @@
+# В образ попадает только код — секреты и мусор остаются снаружи
+.env
+credentials.json
+data/
+.venv/
+.git/
+.github/
+__pycache__/
+.pytest_cache/
+tests/
+docs/
+*.db
+CLAUDE.md

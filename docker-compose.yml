@@ -1,0 +1,25 @@
+services:
+  monitor:
+    build: .
+    container_name: price_sheet
+    # Если программа упала или сервер перезагрузился — Docker поднимет её сам
+    restart: unless-stopped
+    # Таблица, интервал, Telegram — из .env
+    env_file: .env
+    environment:
+      # Пути внутри контейнера переопределяем, остальное — из .env
+      GOOGLE_CREDENTIALS: /app/credentials.json
+      BROWSER_PROFILE: /app/data/browser_profile
+    volumes:
+      # Ключ Google — только для чтения, в образ не попадает
+      - ./credentials.json:/app/credentials.json:ro
+      # Профиль браузера (cookie) снаружи контейнера — переживёт пересборку
+      - ./data:/app/data
+    # Chrome нужна общая память больше стандартных 64 МБ, иначе вкладки падают
+    shm_size: 1gb
+    # Логи: не больше 3 файлов по 10 МБ, чтобы не забить диск сервера
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
