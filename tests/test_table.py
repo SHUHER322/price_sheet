@@ -82,3 +82,8 @@ def test_trend_and_history():
     assert trend(Task(2, "u", None), Product(price=Decimal("1"))) is None
     row = history_row(task, Product(name="A", price=Decimal("90"), in_stock=False), NOW)
     assert row == ["30.10.2026 19:05", "u", "A", 90, "", "нет в наличии"]
+
+
+def test_read_tasks_keeps_name_and_stock():
+    tasks = read_tasks([["https://a.ru", "Книга", "579", "695", "RUB", "нет в наличии"]])
+    assert (tasks[0].name, tasks[0].old_stock) == ("Книга", "нет в наличии")

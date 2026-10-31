@@ -29,6 +29,8 @@ class Task:
     row: int                  # номер строки на листе (с 2, первая — заголовок)
     url: str
     old_price: Decimal | None # цена с прошлой проверки — чтобы посчитать изменение
+    name: str = ""            # название с прошлой проверки — для уведомления об ошибке
+    old_stock: str = ""       # «Наличие» с прошлой проверки — чтобы заметить «снова в наличии»
 
 
 def to_number(value) -> Decimal | None:
@@ -51,8 +53,9 @@ def read_tasks(rows: list[list]) -> list[Task]:
         url = str(row[0]).strip() if row else ""
         if not url:
             continue
-        price = row[COL["Цена"]] if len(row) > COL["Цена"] else None
-        tasks.append(Task(i, url, to_number(price)))
+        cell_at = lambda name: str(row[COL[name]]).strip() if len(row) > COL[name] else ""  # noqa: E731
+        tasks.append(Task(i, url, to_number(cell_at("Цена")), cell_at("Название"),
+                          cell_at("Наличие")))
     return tasks
 
 

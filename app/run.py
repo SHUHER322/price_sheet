@@ -97,17 +97,15 @@ def summary(results: list[Checked]) -> str:
             f"Подешевело: {down}, подорожало: {up}.")
 
 
-async def main() -> None:
-    from .config import load_config
+async def run_once(config) -> list[Checked]:
+    """Одна проверка: прочитать таблицу, загрузить страницы, записать результаты."""
     from .sheet import PriceSheet
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    config = load_config()
     sheet = await asyncio.to_thread(PriceSheet, config.google_credentials, config.spreadsheet_id)
     tasks = read_tasks(await asyncio.to_thread(sheet.read_products))
     if not tasks:
-        log.info("На листе «Товары» нет ссылок — вставьте их в столбец A и запустите снова")
-        return
+        log.info("На листе «Товары» нет ссылок — вставьте их в столбец A")
+        return []
     settings = read_settings(await asyncio.to_thread(sheet.read_settings))
     log.info("Ссылок: %d, сайтов с настройками: %d", len(tasks), len(settings))
 
@@ -127,6 +125,32 @@ async def main() -> None:
         if r.error:
             log.warning("Строка %d: %s — %s", r.task.row, r.task.url, r.error)
     log.info(summary(results))
+    return results
+
+
+async def run_and_notify(config) -> None:
+    """Проверка + уведомление в Telegram, если оно настроено и есть о чём сообщить."""
+    from .notify import build_message, send_telegram
+
+    results = await run_once(config)
+    if not config.telegram_token:
+        return
+    text = build_message(results, config.notify_price_up)
+    if text:
+        await send_telegram(config.telegram_token, config.telegram_chat_ids, text)
+
+
+def setup_logging() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # httpx пишет каждый запрос с полным адресом, а в адресе Telegram — токен бота
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
+async def main() -> None:
+    from .config import load_config
+
+    setup_logging()
+    await run_and_notify(load_config())
 
 
 if __name__ == "__main__":
