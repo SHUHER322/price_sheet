@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from app.fetch import Page
-from app.run import check_all, plan_writes, summary
+from app.run import Checked, check_all, plan_writes, summary
 from app.table import Task, read_settings
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -125,3 +125,15 @@ def test_table_settings_override_builtin():
     settings = read_settings([["wildberries.ru", ".my-price", "", "", "browser"]])
     results = asyncio.run(check_all([Task(2, wb, None)], settings, FakeFetcher({}), browser))
     assert results[0].product.price == Decimal("777")
+
+
+def test_check_line_formats_result():
+    from app.check import line
+    from app.extract import Product
+    from decimal import Decimal
+    ok = Checked(Task(2, "https://shop.ru/1", None),
+                 Product(name="Куртка", price=Decimal("4114"), old_price=Decimal("13000"), currency="RUB"),
+                 None, "browser")
+    assert "✓" in line(ok) and "Куртка | 4114 RUB, старая 13000 | через браузер" in line(ok)
+    bad = Checked(Task(3, "https://shop.ru/2", None), None, "сайт не пустил")
+    assert line(bad).startswith("✗") and "сайт не пустил" in line(bad)
